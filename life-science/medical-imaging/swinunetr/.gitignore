@@ -1,0 +1,10 @@
+data/*
+dataset/*
+pretrained_models/*
+outputs/*
+runs/*
+TODO.md
+*.dcm
+*.nii
+*.gz
+**/.ipynb_checkpoints/*

@@ -1,0 +1,12 @@
+numpy==1.26.4
+numba==0.59.1
+einops==0.4.1
+tensorboardX==2.1
+scipy==1.10.1
+tensorboard==2.13.0
+connected-components-3d
+monai[nibabel,pillow,ignite,tqdm,pydicom]==1.5.0
+fastapi
+uvicorn
+python-multipart
+matplotlib

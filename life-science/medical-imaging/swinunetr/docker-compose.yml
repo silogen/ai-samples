@@ -1,0 +1,27 @@
+services:
+  swin-unetr-train:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    network_mode: host
+    ipc: host
+    devices:
+      - /dev/kfd
+      - /dev/dri/renderD136
+    group_add:
+      - video
+    security_opt:
+      - seccomp=unconfined
+    cap_add:
+      - SYS_PTRACE
+    shm_size: 64G
+    tty: true
+    volumes:
+      - ./data:/workspace/data
+      - ./runs:/workspace/src/runs
+    environment:
+      # Performance improvement: >5x gain in the model fwd + bwd pass; >25% GPU memory efficiency
+      MIOPEN_FIND_MODE: 1
+      MIOPEN_FIND_ENFORCE: 3
+
+    command: ["/bin/bash",  "-c", "cd src/ && python main.py --data_root_dir=/workspace/data/datasets --dataset_labels=GTV-1 --val_every=10 --in_channels=1 --out_channels=1 --warmup_epochs=100 --save_checkpoint --use_checkpoint --feature_size=48 --roi_x=96 --roi_y=96 --roi_z=96 --logdir=model_temp --n_crops_val=4 --n_crops=2 --batch_size=1 --workers=64 --max_epochs=700"]
