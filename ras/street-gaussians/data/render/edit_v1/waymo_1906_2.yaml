@@ -1,0 +1,45 @@
+# Copyright 2026 Advanced Micro Devices, Inc.  All rights reserved.
+ 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+ 
+#       http://www.apache.org/licenses/LICENSE-2.0
+ 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+edits:
+# Accelerate car by 2x (matching previous hardcoded logic)
+- type: accelerate_trajectory
+  object: O1lZ95XGDqQySfFNzXVh7w
+  speed: 1.5
+- type: reverse
+  object: O1lZ95XGDqQySfFNzXVh7w
+# Swap the trajectories of two objects, i.e. swap the objects
+- type: swap_trajectories
+  object1: eQEMUhOsGLO1aTAztBPkzQ
+  object2: GdHfhX6kgZEJQsaizHeX-w
+# Stop a car after a timestamp
+- type: stop_vehicle
+  object: qo0sk0esFAv2q_Imz__lAg
+  # The timestamp is relative to the scene's start time
+  time: 11.0
+  until_end: true
+- type: remove
+  object: 355dtwJFmEVyOwVNp2J86A
+# Duplicate a car
+- type: duplicate
+  object: gL-ftss_KVte8JxnySC6aQ
+  # New object ID will be the above one with this suffix
+  # This is the default if not specified
+  suffix: _small
+  # Offset the trajectory times
+  offset: 1.0
+- type: rescale
+  object: gL-ftss_KVte8JxnySC6aQ_small
+  # Rescale the copy
+  scale: 0.8
+
