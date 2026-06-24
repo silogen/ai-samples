@@ -1,0 +1,8 @@
+jobs/
+slurm_logs/
+launch-cpu.slurm
+launch-gpu.slurm
+inference_server.py
+config.env
+docker-compose.yml
+.dockerignore

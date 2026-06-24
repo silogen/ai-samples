@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenFold3 — Protein Structure Prediction</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/molstar@latest/build/viewer/molstar.css" />
+  <script src="https://cdn.jsdelivr.net/npm/molstar@latest/build/viewer/molstar.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #27272A;
+      --surface: #1a1d27;
+      --border: #2a2d3a;
+      --text: #e1e4ed;
+      --text-dim: #8b8fa3;
+      --accent: #195ABE;
+      --accent-hover: #1E6DE6;
+      --success: #34d399;
+      --warning: #fbbf24;
+      --error: #f87171;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      height: 100vh;
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .panel-left {
+      width: 440px;
+      min-width: 440px;
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .panel-right {
+      flex: 1;
+      position: relative;
+    }
+
+    .panel-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+
+    .panel-header p {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    .panel-body {
+      padding: 20px 24px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 80px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 13px;
+      padding: 12px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+    }
+
+    textarea::placeholder {
+      color: var(--text-dim);
+      opacity: 0.5;
+    }
+
+    .chain-row {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      position: relative;
+    }
+
+    .chain-row-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 8px;
+    }
+
+    .chain-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding-bottom: 6px;
+    }
+
+    .chain-controls {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .control-group-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .copies-input {
+      width: 56px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 13px;
+      padding: 4px 8px;
+      text-align: center;
+      outline: none;
+    }
+
+    .copies-input:focus { border-color: var(--accent); }
+
+
+    .type-select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 12px;
+      padding: 4px 6px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .type-select:focus { border-color: var(--accent); }
+
+    .msa-section {
+      margin-bottom: 12px;
+    }
+
+    .msa-radios {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+
+    .msa-radios label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+      color: var(--text);
+      cursor: pointer;
+      margin-bottom: 0;
+    }
+
+    .msa-radios input[type="radio"] {
+      accent-color: var(--accent);
+    }
+
+    .msa-file-input {
+      margin-top: 6px;
+    }
+
+    .msa-file-input input[type="file"] {
+      display: none;
+    }
+
+    .msa-upload-btn {
+      display: inline-block;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 10px;
+      cursor: pointer;
+      text-transform: none;
+      letter-spacing: 0;
+      margin-bottom: 0;
+    }
+
+    .msa-upload-btn:hover {
+      border-color: var(--accent);
+    }
+
+    .msa-filename {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-left: 8px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 160px;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    .btn-icon {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 4px 8px;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .btn-icon:hover {
+      border-color: var(--error);
+      color: var(--error);
+    }
+
+    .btn-add {
+      width: 100%;
+      padding: 8px;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-dim);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 8px;
+    }
+
+    .btn-add:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .job-list {
+      margin-top: 24px;
+    }
+
+    .job-list h3 {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+
+    .job-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .job-item:hover { border-color: var(--accent); }
+    .job-item.active { border-color: var(--accent); background: rgba(25, 90, 190, 0.08); }
+
+    .job-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .job-id {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .job-seq {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .status-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .status-queued { background: rgba(251, 191, 36, 0.15); color: var(--warning); }
+    .status-running { background: rgba(25, 90, 190, 0.15); color: var(--accent); }
+    .status-completed { background: rgba(52, 211, 153, 0.15); color: var(--success); }
+    .status-failed { background: rgba(248, 113, 113, 0.15); color: var(--error); }
+
+    .output-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .output-toolbar .tab {
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      background: transparent;
+      color: var(--text-dim);
+      border: 1px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .output-toolbar .tab.active {
+      background: var(--accent);
+      color: white;
+    }
+
+    .output-toolbar .tab:hover:not(.active) {
+      border-color: var(--border);
+      color: var(--text);
+    }
+
+    .file-select {
+      margin-left: auto;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 12px;
+      padding: 6px 8px;
+      outline: none;
+    }
+
+    #viewer-container {
+      position: absolute;
+      top: 49px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+    }
+
+    #json-container {
+      position: absolute;
+      top: 49px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 20px;
+      overflow: auto;
+      display: none;
+      background: var(--bg);
+    }
+
+    #json-container pre {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-dim);
+      font-size: 15px;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .status-running .status-badge { animation: pulse 1.5s ease-in-out infinite; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="panel panel-left">
+      <div class="panel-header">
+        <h1>OpenFold3</h1>
+        <p>Protein structure prediction</p>
+      </div>
+      <div class="panel-body">
+        <label>Chains</label>
+        <div id="chains-container"></div>
+        <button class="btn-add" onclick="addChain()">+ Add Chain</button>
+
+        <div class="msa-section">
+          <label>MSA Mode</label>
+          <div class="msa-radios">
+            <label><input type="radio" name="msa-mode" value="none" checked onchange="onMsaModeChange()"> None</label>
+            <label><input type="radio" name="msa-mode" value="colabfold" onchange="onMsaModeChange()"> ColabFold</label>
+            <label><input type="radio" name="msa-mode" value="upload" onchange="onMsaModeChange()"> Upload MSA</label>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="generate-btn" onclick="submitJob()">Generate Structure</button>
+
+        <div class="job-list" id="job-list">
+          <h3>Jobs</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel panel-right">
+      <div class="output-toolbar">
+        <button class="tab active" id="tab-3d" onclick="switchView('3d')">3D Structure</button>
+        <button class="tab" id="tab-json" onclick="switchView('json')">JSON Output</button>
+        <select class="file-select" id="file-select" onchange="onFileSelect()" style="display:none"></select>
+      </div>
+      <div id="viewer-container">
+        <div class="placeholder" id="viewer-placeholder">Submit a protein sequence to visualize its predicted structure</div>
+      </div>
+      <div id="json-container">
+        <pre id="json-content"></pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let viewer = null;
+    let activeJobId = null;
+    let pollTimers = {};
+    let currentView = '3d';
+    let jobs = {};
+    let chainCounter = 0;
+
+    const CHAIN_PLACEHOLDERS = {
+      protein: 'Paste amino acid sequence...',
+      rna: 'Paste RNA nucleotide sequence...',
+      dna: 'Paste DNA nucleotide sequence...',
+      ligand: 'Enter SMILES string...',
+      ligand_ccd: 'Enter CCD code(s), comma-separated (e.g. ATP or ATP,MG)...',
+    };
+
+    function addChain(sequence = '', copies = 1, molType = 'protein') {
+      chainCounter++;
+      const id = chainCounter;
+      const container = document.getElementById('chains-container');
+      const row = document.createElement('div');
+      row.className = 'chain-row';
+      row.id = `chain-${id}`;
+      row.innerHTML = `
+        <div class="chain-row-header">
+          <span class="chain-label">Chain</span>
+          <div class="chain-controls">
+            <div class="control-group">
+              <span class="control-group-label">Entity</span>
+              <select class="type-select" data-chain="${id}" onchange="onTypeChange(${id})">
+                <option value="protein"${molType === 'protein' ? ' selected' : ''}>Protein</option>
+                <option value="rna"${molType === 'rna' ? ' selected' : ''}>RNA</option>
+                <option value="dna"${molType === 'dna' ? ' selected' : ''}>DNA</option>
+                <option value="ligand"${molType === 'ligand' ? ' selected' : ''}>Ligand (SMILES)</option>
+                <option value="ligand_ccd"${molType === 'ligand_ccd' ? ' selected' : ''}>Ligand (CCD)</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <span class="control-group-label">Copies</span>
+              <input type="number" class="copies-input" value="${copies}" min="1" max="26" data-chain="${id}">
+            </div>
+            <button class="btn-icon" onclick="removeChain(${id})" title="Remove chain">&#128465;</button>
+          </div>
+        </div>
+        <textarea placeholder="${CHAIN_PLACEHOLDERS[molType]}" data-chain="${id}">${sequence}</textarea>
+        <div class="msa-file-input" style="display:none">
+          <label class="msa-upload-btn">Upload MSA<input type="file" accept=".a3m,.npz" data-chain="${id}"></label>
+          <span class="msa-filename" data-chain="${id}"></span>
+        </div>`;
+      container.appendChild(row);
+      row.querySelector('.msa-file-input input[type="file"]').addEventListener('change', function() {
+        const span = row.querySelector('.msa-filename');
+        span.textContent = this.files.length ? this.files[0].name : '';
+      });
+      updateChainLabels();
+      updateMsaUploads();
+    }
+
+    function getMsaMode() {
+      return document.querySelector('input[name="msa-mode"]:checked').value;
+    }
+
+    function onMsaModeChange() {
+      updateMsaUploads();
+    }
+
+    function updateMsaUploads() {
+      const mode = getMsaMode();
+      const rows = document.querySelectorAll('#chains-container .chain-row');
+      rows.forEach(row => {
+        const type = row.querySelector('.type-select').value;
+        const fileDiv = row.querySelector('.msa-file-input');
+        const showUpload = mode === 'upload' && (type === 'protein' || type === 'rna');
+        fileDiv.style.display = showUpload ? '' : 'none';
+      });
+    }
+
+    function onTypeChange(id) {
+      const row = document.getElementById(`chain-${id}`);
+      const sel = row.querySelector('.type-select');
+      const ta = row.querySelector('textarea');
+      ta.placeholder = CHAIN_PLACEHOLDERS[sel.value];
+      updateChainLabels();
+      updateMsaUploads();
+    }
+
+    function removeChain(id) {
+      const row = document.getElementById(`chain-${id}`);
+      if (row) row.remove();
+      updateChainLabels();
+    }
+
+    function updateChainLabels() {
+      const rows = document.querySelectorAll('#chains-container .chain-row');
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      rows.forEach((row, i) => {
+        const type = row.querySelector('.type-select').value;
+        let name;
+        if (type === 'rna' || type === 'dna') name = type.toUpperCase();
+        else if (type === 'ligand' || type === 'ligand_ccd') name = 'Ligand';
+        else name = type.charAt(0).toUpperCase() + type.slice(1);
+        row.querySelector('.chain-label').textContent = `${name} ${letters[i] || i + 1}`;
+      });
+    }
+
+    function getChains() {
+      const rows = document.querySelectorAll('#chains-container .chain-row');
+      const chains = [];
+      for (const row of rows) {
+        const input = row.querySelector('textarea').value.trim();
+        const copies = parseInt(row.querySelector('.copies-input').value) || 1;
+        const molType = row.querySelector('.type-select').value;
+        if (!input) continue;
+        const entry = { molecule_type: molType, copies };
+        if (molType === 'ligand') {
+          entry.smiles = input;
+        } else if (molType === 'ligand_ccd') {
+          entry.ccd = input;
+        } else {
+          entry.sequence = input;
+        }
+        chains.push(entry);
+      }
+      return chains;
+    }
+
+    async function initViewer() {
+      document.getElementById('viewer-placeholder').remove();
+      viewer = await molstar.Viewer.create('viewer-container', {
+        layoutIsExpanded: false,
+        layoutShowControls: false,
+        layoutShowRemoteState: false,
+        layoutShowSequence: true,
+        layoutShowLog: false,
+        layoutShowLeftPanel: false,
+        viewportShowExpand: false,
+        viewportShowSelectionMode: false,
+        viewportShowAnimation: false,
+      });
+      viewer.plugin.canvas3d.setProps({
+        renderer: { backgroundColor: 0x000000 },
+      });
+    }
+
+    async function submitJob() {
+      const chains = getChains();
+      if (chains.length === 0) return;
+
+      const msaMode = getMsaMode();
+      const formData = new FormData();
+      formData.append('chains', JSON.stringify(chains));
+      formData.append('msa_mode', msaMode);
+
+      if (msaMode === 'upload') {
+        const rows = document.querySelectorAll('#chains-container .chain-row');
+        let chainIdx = 0;
+        for (const row of rows) {
+          const input = row.querySelector('textarea').value.trim();
+          if (!input) continue;
+          const type = row.querySelector('.type-select').value;
+          if (type === 'protein' || type === 'rna') {
+            const fileInput = row.querySelector('.msa-file-input input[type="file"]');
+            if (fileInput.files.length > 0) {
+              formData.append(`msa_file_${chainIdx}`, fileInput.files[0]);
+            }
+          }
+          chainIdx++;
+        }
+      }
+
+      const btn = document.getElementById('generate-btn');
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+
+      try {
+        const resp = await fetch('/api/generate', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          alert('Error: ' + (err.error || 'Unknown error'));
+          return;
+        }
+
+        const data = await resp.json();
+        const summary = chains.map(c => {
+          const val = c.sequence || c.smiles || c.ccd || '';
+          const tag = {protein: 'P', rna: 'R', dna: 'D', ligand: 'L', ligand_ccd: 'L'}[c.molecule_type] || '?';
+          return `[${tag}] ${val.substring(0, 20)}...(x${c.copies})`;
+        }).join(' | ');
+        jobs[data.job_id] = { state: 'queued', sequence: summary, files: {} };
+        activeJobId = data.job_id;
+        renderJobs();
+        startPolling(data.job_id);
+      } catch (e) {
+        alert('Network error: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate Structure';
+      }
+    }
+
+    addChain();
+
+    function startPolling(jobId) {
+      if (pollTimers[jobId]) return;
+      pollTimers[jobId] = setInterval(() => pollStatus(jobId), 5000);
+      pollStatus(jobId);
+    }
+
+    async function pollStatus(jobId) {
+      try {
+        const resp = await fetch(`/api/status/${jobId}`);
+        if (!resp.ok) return;
+        const data = await resp.json();
+        jobs[jobId] = { state: data.state, sequence: data.sequence, files: data.files };
+        renderJobs();
+
+        if (data.state === 'completed' || data.state === 'failed') {
+          clearInterval(pollTimers[jobId]);
+          delete pollTimers[jobId];
+          if (data.state === 'completed' && activeJobId === jobId) {
+            loadResults(jobId);
+          }
+        }
+      } catch (e) {
+        console.warn('Poll failed for', jobId, e);
+      }
+    }
+
+    function renderJobs() {
+      const container = document.getElementById('job-list');
+      let html = '<h3>Jobs</h3>';
+      for (const [id, job] of Object.entries(jobs)) {
+        const isActive = id === activeJobId;
+        const stateClass = job.state === 'running' ? 'status-running' : '';
+        html += `
+          <div class="job-item ${isActive ? 'active' : ''} ${stateClass}" onclick="selectJob('${id}')">
+            <div class="job-item-header">
+              <span class="job-id">${id}</span>
+              <span class="status-badge status-${job.state}">${job.state}</span>
+            </div>
+            <div class="job-seq">${job.sequence.substring(0, 50)}${job.sequence.length > 50 ? '...' : ''}</div>
+          </div>`;
+      }
+      container.innerHTML = html;
+    }
+
+    async function selectJob(jobId) {
+      activeJobId = jobId;
+      renderJobs();
+      const job = jobs[jobId];
+      if (job.state === 'completed') {
+        updateFileSelect(jobId);
+        if (currentView === '3d') {
+          const firstCif = (job.files.cif || [])[0];
+          if (firstCif) await loadCif(jobId, firstCif);
+        } else {
+          const firstJson = (job.files.json || [])[0];
+          if (firstJson) await loadJson(jobId, firstJson);
+        }
+      } else if (job.state === 'failed') {
+        if (viewer) viewer.plugin.clear();
+        document.getElementById('json-content').textContent = 'Job failed.';
+        updateFileSelect(jobId);
+      }
+    }
+
+    function updateFileSelect(jobId) {
+      const job = jobs[jobId];
+      if (!job || !job.files) return;
+      const fileSelect = document.getElementById('file-select');
+      const files = currentView === '3d' ? (job.files.cif || []) : (job.files.json || []);
+      if (files.length === 0) {
+        fileSelect.style.display = 'none';
+        return;
+      }
+      fileSelect.style.display = '';
+      fileSelect.innerHTML = files.map(f => `<option value="${f}">${f.split('/').pop()}</option>`).join('');
+      fileSelect.value = files[0];
+    }
+
+    async function loadResults(jobId) {
+      const job = jobs[jobId];
+      if (!job || !job.files) return;
+
+      const firstCif = (job.files.cif || [])[0];
+      if (firstCif) {
+        await loadCif(jobId, firstCif);
+      }
+    }
+
+    async function loadCif(jobId, filepath) {
+      if (!viewer) await initViewer();
+      viewer.plugin.clear();
+      const url = `/api/file/${jobId}/${filepath}`;
+      await viewer.loadStructureFromUrl(url, 'mmcif', false);
+    }
+
+    async function loadJson(jobId, filepath) {
+      const el = document.getElementById('json-content');
+      el.textContent = 'Loading...';
+      const resp = await fetch(`/api/file/${jobId}/${filepath}`);
+      if (!resp.ok) {
+        el.textContent = `Error loading file: ${resp.status} ${resp.statusText}`;
+        return;
+      }
+      const text = await resp.text();
+      try {
+        const data = JSON.parse(text);
+        el.textContent = JSON.stringify(data, null, 2);
+      } catch {
+        el.textContent = text;
+      }
+    }
+
+    async function onFileSelect() {
+      const sel = document.getElementById('file-select');
+      const filepath = sel.value;
+      if (!activeJobId || !filepath) return;
+
+      if (filepath.endsWith('.cif')) {
+        await loadCif(activeJobId, filepath);
+      } else if (filepath.endsWith('.json')) {
+        await loadJson(activeJobId, filepath);
+      }
+    }
+
+    async function switchView(view) {
+      currentView = view;
+      const viewerEl = document.getElementById('viewer-container');
+      const jsonEl = document.getElementById('json-container');
+      const tab3d = document.getElementById('tab-3d');
+      const tabJson = document.getElementById('tab-json');
+
+      if (view === '3d') {
+        viewerEl.style.display = 'block';
+        jsonEl.style.display = 'none';
+        tab3d.classList.add('active');
+        tabJson.classList.remove('active');
+      } else {
+        viewerEl.style.display = 'none';
+        jsonEl.style.display = 'block';
+        tab3d.classList.remove('active');
+        tabJson.classList.add('active');
+      }
+
+      if (activeJobId) {
+        updateFileSelect(activeJobId);
+        const sel = document.getElementById('file-select');
+        if (sel.value) {
+          if (view === 'json' && sel.value.endsWith('.json')) {
+            await loadJson(activeJobId, sel.value);
+          } else if (view === '3d' && sel.value.endsWith('.cif')) {
+            await loadCif(activeJobId, sel.value);
+          }
+        }
+      }
+    }
+  </script>
+</body>
+</html>

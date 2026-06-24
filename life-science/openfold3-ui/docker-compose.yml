@@ -1,0 +1,71 @@
+services:
+  inference:
+    image: pfui/openfold3:triton-release
+    build:
+      context: ./configs/OpenFold3
+      dockerfile: Dockerfile.rocm
+    container_name: pfui-inference
+    ipc: host
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    group_add:
+      - video
+    security_opt:
+      - seccomp=unconfined
+    cap_add:
+      - SYS_PTRACE
+    shm_size: "64gb"
+    environment:
+      OPENFOLD_CACHE: /cache/openfold3
+      HIP_VISIBLE_DEVICES: ${HIP_VISIBLE_DEVICES:-0}
+      RUNNER_YAML: /config/inference_config_pfui.yml
+      OUTPUT_DIR: /results/pfui_jobs
+      INFERENCE_PORT: "8061"
+      NUM_DIFFUSION_SAMPLES: "1"
+    volumes:
+      - ./inference_server.py:/app/inference_server.py:ro
+      - ./configs/OpenFold3/inference_config_pfui.yml:/config/inference_config_pfui.yml:ro
+      - ${RESULTS_DIR:?RESULTS_DIR not set - source config.env first}:/results
+      - ./jobs:/jobs
+      - ${CACHE_DIR:?CACHE_DIR not set - source config.env first}:/cache
+    command: ["bash", "-c", "yes | /opt/venv/bin/python /app/inference_server.py"]
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -qO- http://localhost:8061/health 2>/dev/null | grep -q 'model_ready.*true'
+      interval: 10s
+      timeout: 5s
+      retries: 120
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - pfui
+
+  ui:
+    image: pfui:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    container_name: pfui-server
+    user: "${USER_UID:-1000}:${USER_GID:-1000}"
+    depends_on:
+      inference:
+        condition: service_healthy
+    environment:
+      INFERENCE_MODE: server
+      INFERENCE_SERVER_URL: http://inference:8061
+    ports:
+      - "${PFUI_PORT:-8060}:8060"
+    volumes:
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/group:/etc/group:ro
+      - ./jobs:/jobs
+      - ${RESULTS_DIR:?RESULTS_DIR not set - source config.env first}:/results
+    restart: unless-stopped
+    networks:
+      - pfui
+
+networks:
+  pfui:
+    driver: bridge

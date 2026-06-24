@@ -1,0 +1,81 @@
+# Single-stage ROCm build — base image provides Python 3.10 + PyTorch ROCm
+ARG ROCM_BASE_IMAGE=rocm/pytorch:rocm7.2_ubuntu24.04_py3.12_pytorch_release_2.10.0
+FROM ${ROCM_BASE_IMAGE}
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    wget \
+    libopenmpi-dev \
+    libaio-dev \
+    git \
+    python3-dbg \
+    build-essential \
+    ninja-build \
+    rocprofiler-sdk \
+    && rm -rf /var/lib/apt/lists/*
+    #roctracer-dev \
+
+# Install Python packages into the base image's Python (which has ROCm torch)
+# This MUST happen before miniforge is installed, otherwise conda's pip shadows system pip
+RUN pip install --no-cache-dir \
+    uv \
+    pytorch-lightning \
+    deepspeed \
+    biopython \
+    numpy \
+    pandas \
+    PyYAML \
+    requests \
+    scipy \
+    tqdm \
+    typing-extensions \
+    wandb \
+    modelcif \
+    ml-collections \
+    biotite==1.2.0 \
+    memory_profiler \
+    func_timeout \
+    boto3 \
+    lmdb \
+    ijson \
+    awscli \
+    awscrt \
+    mkl \
+    aria2 \
+    pdbeccdutils \
+    gemmi \
+    kalign-python \
+    flask
+
+# Verify torch is still the ROCm build (pip didn't replace it)
+RUN python3 -c "import torch; print('torch:', torch.__file__, 'hip:', torch.version.hip)"
+
+# Install miniforge (only for bioinformatics CLI tools)
+RUN wget -P /tmp \
+    "https://github.com/conda-forge/miniforge/releases/download/25.11.0-1/Miniforge3-Linux-x86_64.sh" \
+    && bash /tmp/Miniforge3-Linux-x86_64.sh -b -p /opt/conda \
+    && rm /tmp/Miniforge3-Linux-x86_64.sh
+
+# Install bioinformatics CLI tools via conda
+RUN /opt/conda/bin/mamba install -n base -c conda-forge -c bioconda --yes \
+    rdkit=2025.09.3 \
+    mmseqs2 \
+    hmmer \
+    hhsuite \
+    kalign2 \
+    snakemake
+RUN /opt/conda/bin/conda clean --all --yes
+
+# Environment variables
+ENV ROCM_PATH=/opt/rocm
+ENV PYTORCH_ROCM_ARCH="gfx90a;gfx942"
+ENV KMP_AFFINITY=none
+ENV CONDA_PREFIX=/opt/conda
+
+# Clone source and install into the SYSTEM Python
+RUN git clone https://github.com/aqlaboratory/openfold-3.git /opt/openfold3
+WORKDIR /opt/openfold3
+RUN pip install --no-deps --editable .
+
+# Add conda to PATH last — only for bioinformatics CLI tools (rdkit, hmmer, etc.)
+ENV PATH=/opt/conda/bin:$PATH
