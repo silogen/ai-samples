@@ -1,0 +1,24 @@
+experiment_settings:
+  seeds: [101001]
+
+template_preprocessor_settings:
+  output_directory: /cache/of3_template_data
+
+dataset_config_kwargs: {}
+
+model_update:
+  presets: 
+    - predict
+    - pae_enabled
+  custom:
+    settings:
+      memory:
+        eval:
+          use_deepspeed_evo_attention: false
+          use_cueq_triangle_kernels: false
+          use_triton_triangle_kernels: true
+    # architecture:
+    #   shared:
+    #     num_recycles: 1
+    #     diffusion:
+    #       no_full_rollout_steps: 20
