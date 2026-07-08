@@ -59,6 +59,18 @@
       border-bottom: 1px solid var(--border);
     }
 
+    .panel-header .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .panel-header .brand-logo {
+      height: 22px;
+      width: auto;
+      display: block;
+    }
+
     .panel-header h1 {
       font-size: 18px;
       font-weight: 600;
@@ -461,7 +473,10 @@
   <div class="container">
     <div class="panel panel-left">
       <div class="panel-header">
-        <h1>OpenFold3</h1>
+        <div class="brand">
+          <img class="brand-logo" src="{{ url_for('static', filename='amd-logo.png') }}" alt="AMD">
+          <h1>AIM for OpenFold3</h1>
+        </div>
         <p>Protein structure prediction</p>
       </div>
       <div class="panel-body">
