@@ -206,6 +206,7 @@ def status(job_id):
     cif_files = list(output_dir.rglob("*_model.cif"))
     json_files = list(output_dir.rglob("*_confidences*.json"))
 
+    error = None
     if cif_files:
         state = "completed"
     elif INFERENCE_MODE == "server":
@@ -213,7 +214,12 @@ def status(job_id):
             resp = http_requests.get(
                 f"{INFERENCE_SERVER_URL}/status/{job_id}", timeout=5
             )
-            state = resp.json().get("status", "queued") if resp.ok else "queued"
+            if resp.ok:
+                body = resp.json()
+                state = body.get("status", "queued")
+                error = body.get("error")
+            else:
+                state = "queued"
         except (http_requests.RequestException, ValueError):
             state = "queued"
     else:
@@ -233,7 +239,10 @@ def status(job_id):
         "json": [str(f.relative_to(output_dir)) for f in json_files],
     }
 
-    return jsonify({"job_id": job_id, "state": state, "files": files, "sequence": meta["sequence"]})
+    payload = {"job_id": job_id, "state": state, "files": files, "sequence": meta["sequence"]}
+    if error:
+        payload["error"] = error
+    return jsonify(payload)
 
 
 @app.route("/api/file/<job_id>/<path:filepath>")
