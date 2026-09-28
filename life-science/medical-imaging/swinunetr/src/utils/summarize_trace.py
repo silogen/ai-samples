@@ -37,7 +37,7 @@ def load(path: str):
         with gzip.open(path) as fo:
             data = json.load(fo)
     elif path.endswith(".json"):
-        with open(path, "wt") as fo:
+        with open(path, "rt") as fo:
             data = json.load(fo)
     else:
         raise ValueError("File must be a '.json', '.zip' or '.gz'.")
